@@ -18,8 +18,8 @@ def test_wheel_metadata(package_test_setuptools: str, isolated: bool) -> None:
     metadata = build.util.wheel_metadata(package_test_setuptools, isolated)
 
     # Setuptools < v69.0.3 (https://github.com/pypa/setuptools/pull/4159) normalized this to dashes
-    assert metadata['name'].replace('-', '_') == 'test_setuptools'
-    assert metadata['version'] == '1.0.0'
+    assert metadata.get('name', '').replace('-', '_') == 'test_setuptools'
+    assert metadata.get('version') == '1.0.0'
     assert isinstance(metadata, dict)
 
 
@@ -30,8 +30,8 @@ def test_wheel_metadata_isolation(package_test_flit: str) -> None:
 
     metadata = build.util.wheel_metadata(package_test_flit)
 
-    assert metadata['name'] == 'test_flit'
-    assert metadata['version'] == '1.0.0'
+    assert metadata.get('name') == 'test_flit'
+    assert metadata.get('version') == '1.0.0'
     assert isinstance(metadata, dict)
 
     with pytest.raises(
@@ -46,9 +46,9 @@ def test_with_get_requires(package_test_metadata: str) -> None:
     metadata = build.util.wheel_metadata(package_test_metadata)
 
     # Setuptools < v69.0.3 (https://github.com/pypa/setuptools/pull/4159) normalized this to dashes
-    assert metadata['name'].replace('-', '_') == 'test_metadata'
-    assert metadata['version'] == '1.0.0'
-    assert metadata['summary'] == 'hello!'
+    assert metadata.get('name', '').replace('-', '_') == 'test_metadata'
+    assert metadata.get('version') == '1.0.0'
+    assert metadata.get('summary') == 'hello!'
     assert isinstance(metadata, dict)
 
 
@@ -74,6 +74,15 @@ def test_project_wheel_metadata_installs_build_requires_fresh(mocker: pytest_moc
     ]
 
 
+def test_project_wheel_metadata_non_isolated(mocker: pytest_mock.MockerFixture) -> None:
+    builder = mocker.MagicMock()
+    metadata = unittest.mock.sentinel.metadata
+    mocker.patch('build.util.ProjectBuilder', return_value=builder)
+    mocker.patch('build.util._project_wheel_metadata', return_value=metadata)
+
+    assert build.util.project_wheel_metadata('/tmp/project', isolated=False) is metadata
+
+
 def test_wheel_metadata_reads_parsed_metadata(tmp_path: pathlib.Path, mocker: pytest_mock.MockerFixture) -> None:
     builder = mocker.MagicMock()
     metadata_dir = tmp_path / 'demo-1.0.dist-info'
@@ -84,5 +93,9 @@ def test_wheel_metadata_reads_parsed_metadata(tmp_path: pathlib.Path, mocker: py
 
     metadata = build.util.wheel_metadata(tmp_path / 'project', isolated=False)
 
-    assert metadata['name'] == 'demo'
-    assert metadata['version'] == '1.0'
+    assert metadata.get('name') == 'demo'
+    assert metadata.get('version') == '1.0'
+
+    legacy_metadata = build.util._project_wheel_metadata(builder)
+    assert legacy_metadata['Name'] == 'demo'
+    assert legacy_metadata['Version'] == '1.0'

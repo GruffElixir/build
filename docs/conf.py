@@ -86,6 +86,7 @@ autoclass_content = 'both'
 
 nitpick_ignore = [
     ('py:data', 'typing.Union'),
+    ('py:class', 'packaging.metadata.RawMetadata'),
 ]
 
 
