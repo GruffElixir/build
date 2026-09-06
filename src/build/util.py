@@ -4,6 +4,7 @@ from __future__ import annotations
 
 
 __lazy_modules__ = {
+    'packaging',
     'packaging.metadata',
     'pathlib',
     'tempfile',
