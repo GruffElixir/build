@@ -83,6 +83,15 @@ Getting package metadata without building:
         metadata_dir = builder.metadata_path(tmpdir)
         # Read METADATA file from metadata_dir to extract package info
 
+Getting parsed wheel metadata:
+
+.. code-block:: python
+
+    from build.util import wheel_metadata
+
+    metadata = wheel_metadata("path/to/project")
+    print(metadata["name"], metadata["version"])
+
 Accessing build dependencies:
 
 .. code-block:: python

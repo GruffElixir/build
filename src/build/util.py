@@ -4,6 +4,7 @@ from __future__ import annotations
 
 
 __lazy_modules__ = {
+    'packaging.metadata',
     'pathlib',
     'tempfile',
     f'{__spec__.parent}._compat',
@@ -13,6 +14,7 @@ __lazy_modules__ = {
 import pathlib
 import tempfile
 
+import packaging.metadata
 import pyproject_hooks
 
 from . import ProjectBuilder
@@ -31,6 +33,52 @@ def _project_wheel_metadata(builder: ProjectBuilder) -> importlib.metadata.Packa
         metadata = importlib.metadata.PathDistribution(path).metadata
         assert metadata is not None
         return metadata
+
+
+def _wheel_metadata(builder: ProjectBuilder) -> packaging.metadata.RawMetadata:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        metadata_path = pathlib.Path(builder.metadata_path(tmpdir), 'METADATA')
+        raw_metadata = metadata_path.read_bytes()
+
+    metadata, _ = packaging.metadata.parse_email(raw_metadata)
+    return metadata
+
+
+def wheel_metadata(
+    source_dir: StrPath,
+    isolated: bool = True,
+    *,
+    runner: SubprocessRunner = pyproject_hooks.quiet_subprocess_runner,
+) -> packaging.metadata.RawMetadata:
+    """
+    Return a project's wheel metadata as a parsed, JSON-serialisable mapping.
+
+    Uses the ``prepare_metadata_for_build_wheel`` hook if available,
+    otherwise ``build_wheel``, and parses the resulting ``METADATA`` file.
+
+    :param source_dir: Project source directory
+    :param isolated: Whether or not to invoke the backend in the current
+                     environment or to create an isolated one and invoke it
+                     there.
+    :param runner: An alternative runner for backend subprocesses
+    """
+
+    if isolated:
+        with DefaultIsolatedEnv() as env:
+            builder = ProjectBuilder.from_isolated_env(
+                env,
+                source_dir,
+                runner=runner,
+            )
+            env.install(builder.build_system_requires, _fresh=True)
+            env.install(builder.get_requires_for_build('wheel'))
+            return _wheel_metadata(builder)
+    else:
+        builder = ProjectBuilder(
+            source_dir,
+            runner=runner,
+        )
+        return _wheel_metadata(builder)
 
 
 def project_wheel_metadata(
@@ -72,4 +120,5 @@ def project_wheel_metadata(
 
 __all__ = [
     'project_wheel_metadata',
+    'wheel_metadata',
 ]

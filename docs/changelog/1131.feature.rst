@@ -1,0 +1,1 @@
+Add ``build.util.wheel_metadata`` for programmatic access to parsed wheel metadata - by :user:`GruffElixir`
